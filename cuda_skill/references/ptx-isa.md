@@ -6,11 +6,12 @@
 
 The documentation has been converted to markdown with:
 - ✅ All tables, code blocks, and formatting preserved
-- ✅ 477 files organized by chapter
+- ✅ 405 files organized by chapter
 - ✅ Full searchability with grep/ripgrep
 - ✅ Section numbers for precise navigation
+- ✅ 1049 diagrams referenced as URLs (NVIDIA CDN)
 
-See `ptx-docs/README.md` for complete usage guide.
+**Note on diagrams**: Agents may not have access to the internet. If so, when images are relevant to a query, extract URLs from markdown and return them to the parent for fetching if needed.
 
 ## When to Use PTX Documentation
 
