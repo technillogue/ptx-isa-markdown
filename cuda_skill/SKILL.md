@@ -125,7 +125,7 @@ cuobjdump -symbols ./program | grep -i kernel
 
 ### Golden Rule
 
-**Never optimize without profiling first.** Intuition about GPU bottlenecks is almost always wrong.
+**Never optimize without profiling first.** Intuition about GPU bottlenecks is almost always wrong. The profile → fix → verify loop is the actual optimization work, not a preliminary step.
 
 ### Performance Investigation Steps
 
@@ -217,6 +217,8 @@ ncu --section ComputeWorkloadAnalysis --section MemoryWorkloadAnalysis ./program
 
 **Warning:** ncu expert system recommendations can be misleading. Always verify with actual metrics and experiments.
 
+**Scale matters:** Optimizations that help at large scale can hurt at small scale. Always profile at your actual problem size, not theoretical maximums.
+
 ### NVTX for Custom Instrumentation
 
 When you need finer granularity than kernel-level, use NVTX:
@@ -261,6 +263,12 @@ nsys stats report.nsys-rep --report nvtx_sum
 | Compute bound but slow | Low occupancy, register pressure | ncu occupancy, reduce registers |
 | Lots of small kernels | Launch overhead dominates | nsys timeline, consider fusion |
 | High memcpy time | Excessive H2D/D2H transfers | nsys cuda_gpu_mem, batch transfers |
+| Most cycles stalled | Bank conflicts, memory stalls | ncu SchedulerStatistics, check shared memory |
+| High sectors/request | Poor coalescing (>4 sectors/req) | ncu memory metrics, use vectorized loads |
+
+**Critical traps:** Bank conflicts and memory coalescing issues often dominate performance but aren't obvious without profiling. See `references/performance-traps.md` for detailed diagnosis and fixes.
+
+**Reality check:** Budget 80% of optimization time for problems you didn't predict. Profile-driven iteration discovers the real bottlenecks.
 
 ## Compilation Reference
 
@@ -308,8 +316,9 @@ Use PTX reference when you need to:
 
 ## Reference Files
 
+- `references/performance-traps.md` — Bank conflicts, memory coalescing, scale-dependent optimizations, unknown unknowns
 - `references/nsys-guide.md` — Detailed nsys usage and analysis patterns
-- `references/ncu-guide.md` — Detailed ncu metrics and interpretation  
+- `references/ncu-guide.md` — Detailed ncu metrics and interpretation
 - `references/debugging-tools.md` — compute-sanitizer, cuda-gdb, cuobjdump details
 - `references/nvtx-patterns.md` — NVTX instrumentation patterns
 - `references/ptx-isa.md` — PTX instruction set reference (when available)

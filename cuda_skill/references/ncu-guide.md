@@ -175,6 +175,29 @@ Signs of poor coalescing:
 - High L2 sector ratios
 - Low memory throughput despite high memory traffic
 
+**Specific metrics for coalescing:**
+```bash
+ncu --metrics l1tex__t_sectors_pipe_lsu_mem_global_op_ld.sum,l1tex__t_requests_pipe_lsu_mem_global_op_ld.sum ./program
+# Divide sectors by requests: 1-4 is good, 8-16 is poor, 32+ is very poor
+```
+
+### Pattern: Bank Conflicts Analysis
+
+```bash
+ncu --section SchedulerStatistics --kernel-name "myKernel" ./program
+```
+
+Check "Warp Stall" breakdown to see if stalls are memory-related.
+
+**Specific metrics for bank conflicts:**
+```bash
+ncu --metrics l1tex__data_bank_conflicts_pipe_lsu_mem_shared_op_ld.sum,l1tex__data_bank_conflicts_pipe_lsu_mem_shared_op_st.sum \
+    --metrics l1tex__data_pipe_lsu_wavefronts_mem_shared_op_ld.sum,l1tex__data_pipe_lsu_wavefronts_mem_shared_op_st.sum \
+    ./program
+# Divide conflicts by wavefronts to get average conflicts per operation
+# >1 per operation indicates significant conflicts
+```
+
 ### Pattern: Occupancy Investigation
 
 ```bash
@@ -224,6 +247,10 @@ dram__throughput.avg_pct_of_peak_sustained_elapsed ./program
 --metrics sm__warps_active.avg_pct_of_peak_sustained_elapsed # Active warps
 --metrics launch__occupancy_limit_registers               # Reg-limited occupancy
 --metrics launch__occupancy_limit_shared_mem              # Smem-limited occupancy
+--metrics l1tex__data_bank_conflicts_pipe_lsu_mem_shared_op_ld.sum # Bank conflicts (loads)
+--metrics l1tex__data_bank_conflicts_pipe_lsu_mem_shared_op_st.sum # Bank conflicts (stores)
+--metrics l1tex__t_sectors_pipe_lsu_mem_global_op_ld.sum  # Memory sectors (coalescing)
+--metrics l1tex__t_requests_pipe_lsu_mem_global_op_ld.sum # Memory requests (coalescing)
 ```
 
 ## Expert System Caveats
