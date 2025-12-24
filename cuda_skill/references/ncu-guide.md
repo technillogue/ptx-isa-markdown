@@ -1,5 +1,19 @@
 # Nsight Compute (ncu) Reference
 
+## Table of Contents
+
+- [Overview](#overview) — Detailed kernel analysis and metrics
+- [Basic Commands](#basic-commands) — Profile kernels, save reports, metric sets
+- [Metric Sets](#metric-sets) — basic, full, memory, compute, launch, occupancy, roofline, source
+- [Sections](#sections) — LaunchStatistics, Occupancy, MemoryWorkloadAnalysis, ComputeWorkloadAnalysis, SchedulerStatistics
+- [Key Metrics Explained](#key-metrics-explained) — SpeedOfLight, Occupancy, Memory/Compute Throughput
+- [Output Formats](#output-formats) — CSV, page format, summary
+- [Filtering and Selection](#filtering-and-selection) — By kernel name, invocation, range
+- [Analysis Patterns](#analysis-patterns) — Memory vs compute bound, coalescing, bank conflicts, occupancy, source-level
+- [Specific Metrics Query](#specific-metrics-query) — Query and use individual metrics
+- [Expert System Caveats](#expert-system-caveats) — Use recommendations with caution
+- [Troubleshooting](#troubleshooting) — Common issues
+
 ## Overview
 
 ncu answers: "Why is this kernel slow?" Use it for detailed kernel analysis: memory throughput, compute utilization, occupancy, roofline analysis.
@@ -167,19 +181,17 @@ Look at SM% vs Memory%:
 ncu --section MemoryWorkloadAnalysis --kernel-name "myKernel" ./program
 ```
 
-Check:
-- **L2 Sector/Request** — Should be close to 1 for coalesced
-- **L2 Sectors Read/Written** — vs theoretical minimum
-
-Signs of poor coalescing:
-- High L2 sector ratios
-- Low memory throughput despite high memory traffic
+Check MemoryWorkloadAnalysis section for sector/request ratios and theoretical vs actual throughput.
 
 **Specific metrics for coalescing:**
 ```bash
 ncu --metrics l1tex__t_sectors_pipe_lsu_mem_global_op_ld.sum,l1tex__t_requests_pipe_lsu_mem_global_op_ld.sum ./program
 # Divide sectors by requests: 1-4 is good, 8-16 is poor, 32+ is very poor
 ```
+
+Signs of poor coalescing:
+- High sector/request ratios
+- Low memory throughput despite high memory traffic
 
 ### Pattern: Bank Conflicts Analysis
 

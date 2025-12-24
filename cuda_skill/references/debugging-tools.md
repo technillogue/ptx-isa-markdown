@@ -1,5 +1,12 @@
 # CUDA Debugging Tools Reference
 
+## Table of Contents
+
+- [compute-sanitizer](#compute-sanitizer) — Memory checking and race detection (memcheck, racecheck, initcheck, synccheck)
+- [cuda-gdb](#cuda-gdb) — CUDA-aware debugger batch mode
+- [cuobjdump](#cuobjdump) — Binary inspection (PTX, SASS, resources)
+- [Debugging Strategy](#debugging-strategy) — Workflow for systematic bug isolation
+
 ## compute-sanitizer
 
 Memory checking and race detection for CUDA applications.
@@ -84,15 +91,7 @@ compute-sanitizer --tool synccheck ./program
 --print-limit N               # Max errors to print (default 100)
 ```
 
-### Compilation for Debugging
-
-```bash
-nvcc -g -G -lineinfo program.cu -o program
-```
-
-- `-g` — Host debug info
-- `-G` — Device debug info (disables optimizations)
-- `-lineinfo` — Line info without disabling optimizations
+**Note:** Compile with `-g -G -lineinfo` for best debugging experience (see SKILL.md).
 
 ## cuda-gdb
 
@@ -277,16 +276,10 @@ Before any tool, create minimal reproduction:
 
 ### 2. Use printf First
 
-```cuda
-__global__ void kernel(int* data, int n) {
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (idx == 0) printf("kernel start, n=%d\n", n);
-    
-    // ... suspect code ...
-    
-    if (idx < 5) printf("idx=%d, value=%d\n", idx, data[idx]);
-}
-```
+Add strategic printf statements to device code (see printf patterns in SKILL.md):
+- Print at kernel entry to confirm launch
+- Print intermediate values at suspected failure points
+- Guard with `if (idx == 0)` or `if (idx < N)` to limit output
 
 Printf works when all else fails. Don't underestimate it.
 
@@ -343,18 +336,6 @@ for (int i = 0; i < N; i++)
 Some GPU instructions (ldmatrix, tensor core ops) have non-intuitive register layouts:
 
 - **Don't assume** that loading data via special instructions produces the same register layout as scalar loads
-- **Verify experimentally** with printf or store-back-and-compare
+- **Verify experimentally** with printf or store-back-and-compare patterns
 - **Check PTX documentation** for exact semantics of special instructions
-
-```cuda
-// Verification pattern for special load instructions
-__global__ void verify_layout(float* output, float* input) {
-    // Load with special instruction
-    asm("special.load ...");
-
-    // Store result to global memory for inspection
-    output[threadIdx.x * 4 + 0] = reg[0];
-    output[threadIdx.x * 4 + 1] = reg[1];
-    // Compare against expected layout
-}
-```
+- **Common approach**: Load with special instruction, store results to global memory, inspect on CPU

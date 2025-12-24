@@ -1,5 +1,15 @@
 # Nsight Systems (nsys) Reference
 
+## Table of Contents
+
+- [Overview](#overview) — System-wide profiling and timeline analysis
+- [Basic Commands](#basic-commands) — Profile, trace options, stats reports
+- [Stats Reports](#stats-reports) — Key reports (cuda_gpu_kern_sum, cuda_api_sum, cuda_gpu_mem_time_sum, nvtx_sum)
+- [Export Formats](#export-formats) — SQLite, CSV, JSON
+- [Filtering](#filtering) — Time range, capture control
+- [Analysis Patterns](#analysis-patterns) — Finding gaps, memory transfers, kernel overhead, NVTX-guided analysis
+- [Troubleshooting](#troubleshooting) — Common issues
+
 ## Overview
 
 nsys answers: "Where is time spent?" Use it for system-wide profiling, CPU/GPU interaction, memory transfers, and timeline analysis.

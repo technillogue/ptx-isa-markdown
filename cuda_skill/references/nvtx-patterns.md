@@ -1,5 +1,15 @@
 # NVTX Patterns Reference
 
+## Table of Contents
+
+- [Overview](#overview) — Custom markers for profiling
+- [Setup](#setup) — Include header, compilation, profiling
+- [Basic API](#basic-api) — Range push/pop, colors, marks, named threads
+- [Common Patterns](#common-patterns) — Phase tracking, iteration tracking, kernel wrapper, CPU vs GPU time, color-coded categories, RAII wrapper, conditional profiling
+- [Analysis with nsys](#analysis-with-nsys) — NVTX summary, correlation with CUDA
+- [Best Practices](#best-practices) — Consistency, hierarchy, overhead considerations
+- [Overhead Considerations](#overhead-considerations) — Performance impact
+
 ## Overview
 
 NVIDIA Tools Extension (NVTX) provides custom markers for profiling. Use when kernel-level granularity isn't enough.

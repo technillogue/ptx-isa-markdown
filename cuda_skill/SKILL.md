@@ -62,20 +62,8 @@ __global__ void myKernel(float* data, int n) {
 # Memory errors (most common)
 compute-sanitizer --tool memcheck ./program
 
-# Race conditions
-compute-sanitizer --tool racecheck ./program
-
-# Uninitialized memory reads
-compute-sanitizer --tool initcheck ./program
-
-# Sync errors
-compute-sanitizer --tool synccheck ./program
-
-# Save report to file
-compute-sanitizer --tool memcheck --log-file report.txt ./program
-
-# Show backtraces (requires -lineinfo compilation)
-compute-sanitizer --tool memcheck --show-backtrace yes ./program
+# Other tools: racecheck, initcheck, synccheck
+# For detailed options, see references/debugging-tools.md
 ```
 
 ### cuda-gdb Non-Interactive
@@ -84,20 +72,7 @@ compute-sanitizer --tool memcheck --show-backtrace yes ./program
 # Get backtrace on crash
 cuda-gdb -batch -ex "run" -ex "bt" ./program
 
-# With arguments
-cuda-gdb -batch -ex "run arg1 arg2" -ex "bt" ./program
-
-# Examine specific location after crash
-cuda-gdb -batch -ex "run" -ex "bt" -ex "info cuda threads" ./program
-
-# Set breakpoint and examine
-cuda-gdb -batch \
-  -ex "break myKernel" \
-  -ex "run" \
-  -ex "info cuda threads" \
-  -ex "print idx" \
-  -ex "continue" \
-  ./program
+# For breakpoints, thread inspection, see references/debugging-tools.md
 ```
 
 **Compile with debug info:**
@@ -108,18 +83,14 @@ nvcc -g -G -lineinfo program.cu -o program
 ### cuobjdump for Binary Inspection
 
 ```bash
-# Dump PTX
+# Dump PTX and SASS
 cuobjdump -ptx ./program
-
-# Dump SASS (actual GPU assembly)
 cuobjdump -sass ./program
 
-# Show resource usage per kernel
-cuobjdump -res-usage ./program
-
-# List all kernels
-cuobjdump -symbols ./program | grep -i kernel
+# For resource usage, symbol listing, see references/debugging-tools.md
 ```
+
+**For complete debugging tool reference:** See `references/debugging-tools.md` for detailed compute-sanitizer options, cuda-gdb workflows, and cuobjdump analysis patterns.
 
 ## Performance Optimization Workflow
 
@@ -142,82 +113,40 @@ cuobjdump -symbols ./program | grep -i kernel
 Use nsys for: "Where is time being spent?" — CPU/GPU interaction, kernel launch patterns, memory transfers, overall timeline.
 
 ```bash
-# Basic profile with report
+# Basic profile
 nsys profile -o report ./program
-nsys stats report.nsys-rep
+nsys stats report.nsys-rep --report cuda_gpu_kern_sum
 
-# Focus on CUDA only (faster)
-nsys profile --trace=cuda -o report ./program
-
-# Include NVTX markers
+# With NVTX markers
 nsys profile --trace=cuda,nvtx -o report ./program
 
-# Export to text
-nsys stats report.nsys-rep --report cuda_gpu_kern_sum
-nsys stats report.nsys-rep --report cuda_api_sum
-nsys stats report.nsys-rep --report nvtx_sum
-
-# All available reports
-nsys stats report.nsys-rep --help
+# Key reports: cuda_gpu_kern_sum, cuda_api_sum, cuda_gpu_mem_time_sum, nvtx_sum
+# For detailed usage, see references/nsys-guide.md
 ```
 
-**Key nsys stats reports:**
-- `cuda_gpu_kern_sum` — Kernel execution time summary
-- `cuda_api_sum` — CUDA API call summary  
-- `cuda_gpu_mem_time_sum` — Memory operation times
-- `nvtx_sum` — NVTX range summary
-- `osrt_sum` — OS runtime (pthread, file I/O, etc.)
+**For detailed nsys analysis patterns:** See `references/nsys-guide.md` for timeline interpretation, identifying common bottlenecks, and analysis workflows.
 
 ### ncu (Nsight Compute) — Kernel Analysis
 
 Use ncu for: "Why is this kernel slow?" — Detailed metrics, roofline, memory analysis, occupancy.
 
 ```bash
-# Profile all kernels (can be slow)
-ncu -o report ./program
-
 # Profile specific kernel
 ncu --kernel-name "myKernel" -o report ./program
 
-# Quick summary (no file, prints to stdout)
+# Quick summary to stdout
 ncu --set basic ./program
 
-# Full analysis
-ncu --set full -o report ./program
-
-# Memory throughput focus
-ncu --set memory -o report ./program
-
-# Launch statistics
-ncu --set launch -o report ./program
-
-# Roofline analysis
-ncu --set roofline -o report ./program
-
-# Show results in CLI
-ncu --print-summary per-kernel ./program
-
-# Export to CSV
-ncu --csv ./program > metrics.csv
-```
-
-**ncu sections (use `--section`):**
-- `ComputeWorkloadAnalysis` — Compute throughput
-- `MemoryWorkloadAnalysis` — Memory throughput
-- `LaunchStatistics` — Blocks, threads, registers
-- `Occupancy` — Theoretical vs achieved occupancy
-- `SchedulerStatistics` — Warp scheduling
-- `SpeedOfLight` — Roofline position
-- `SourceCounters` — Per-line metrics (requires -lineinfo)
-
-```bash
-# Specific sections
-ncu --section ComputeWorkloadAnalysis --section MemoryWorkloadAnalysis ./program
+# Sets: basic, full, memory, launch, roofline
+# Sections: ComputeWorkloadAnalysis, MemoryWorkloadAnalysis, Occupancy
+# For detailed metrics and interpretation, see references/ncu-guide.md
 ```
 
 **Warning:** ncu expert system recommendations can be misleading. Always verify with actual metrics and experiments.
 
 **Scale matters:** Optimizations that help at large scale can hurt at small scale. Always profile at your actual problem size, not theoretical maximums.
+
+**For detailed ncu metric interpretation:** See `references/ncu-guide.md` for understanding roofline analysis, memory bottlenecks, occupancy limits, and warp scheduling.
 
 ### NVTX for Custom Instrumentation
 
@@ -226,33 +155,14 @@ When you need finer granularity than kernel-level, use NVTX:
 ```cuda
 #include <nvtx3/nvToolsExt.h>
 
-void processData() {
-    nvtxRangePush("Data Processing");
-    
-    nvtxRangePush("Preprocessing");
-    preprocess();
-    nvtxRangePop();
-    
-    nvtxRangePush("Kernel Execution");
-    myKernel<<<grid, block>>>(data, n);
-    cudaDeviceSynchronize();
-    nvtxRangePop();
-    
-    nvtxRangePush("Postprocessing");
-    postprocess();
-    nvtxRangePop();
-    
-    nvtxRangePop();
-}
+nvtxRangePush("Operation Name");
+// ... code to profile ...
+nvtxRangePop();
 ```
 
-**Link with:** `-lnvToolsExt`
+**Compile:** `-lnvToolsExt` | **Profile:** `nsys profile --trace=cuda,nvtx`
 
-Profile and view NVTX stats:
-```bash
-nsys profile --trace=cuda,nvtx -o report ./program
-nsys stats report.nsys-rep --report nvtx_sum
-```
+**For complete patterns:** See `references/nvtx-patterns.md` for nested ranges, colors, and analysis workflows.
 
 ### Common Performance Patterns
 
@@ -296,32 +206,33 @@ nvcc program.cu -lnvToolsExt -o program
 
 **Always compile with `-lineinfo` for production profiling** — minimal overhead, enables source correlation.
 
-## PTX Reference
+## Local API Documentation
 
-**Complete PTX ISA 9.1 documentation is available locally** at `references/ptx-docs/` (477 markdown files with all tables, code blocks, and examples preserved).
+Complete reference documentation available for grep-based search:
 
-See `references/ptx-isa.md` for:
-- Quick search examples (register fragments, swizzling, TMA)
-- Documentation structure guide
-- Common PTX patterns
-- TensorCore operation references (WMMA, WGMMA, TMA)
+**PTX ISA 9.1** — `references/ptx-docs/` (405 files, 2.3MB)
+- Search guide: `references/ptx-isa.md`
+- Use for: Instruction-level optimization, inline PTX, TensorCore operations (WMMA, WGMMA, TMA), memory swizzling
 
-Use PTX reference when you need to:
-- Understand generated PTX (via `cuobjdump -ptx`)
-- Write inline PTX assembly
-- Debug code generation issues
-- Optimize at the instruction level
-- Look up TensorCore operations (WMMA, WGMMA, TMA)
-- Understand memory operations and swizzling modes
+**CUDA Runtime API 13.1** — `references/cuda-runtime-docs/` (107 files, 0.9MB)
+- Search guide: `references/cuda-runtime.md`
+- Use for: Error codes, API parameters, device properties (`cudaDeviceProp`), memory management, stream behavior
 
-## Reference Files
+**CUDA Driver API 13.1** — `references/cuda-driver-docs/` (128 files, 0.8MB)
+- Search guide: `references/cuda-driver.md`
+- Use for: Context management (`cuCtxCreate`), module loading (`cuModuleLoad`), virtual memory, Driver errors (`CUDA_ERROR_*`), advanced features
 
-- `references/performance-traps.md` — Bank conflicts, memory coalescing, scale-dependent optimizations, unknown unknowns
-- `references/nsys-guide.md` — Detailed nsys usage and analysis patterns
-- `references/ncu-guide.md` — Detailed ncu metrics and interpretation
-- `references/debugging-tools.md` — compute-sanitizer, cuda-gdb, cuobjdump details
-- `references/nvtx-patterns.md` — NVTX instrumentation patterns
-- `references/ptx-isa.md` — PTX instruction set reference (when available)
+Each search guide contains grep examples, documentation structure, and common usage patterns.
+
+**Search strategy:** Use grep/ripgrep to search directly in the `*-docs/` directories. The search guides (`.md` files) provide navigation patterns and common queries.
+
+## Additional References
+
+- `references/performance-traps.md` — Bank conflicts, memory coalescing, scale-dependent optimizations
+- `references/debugging-tools.md` — compute-sanitizer, cuda-gdb, cuobjdump detailed usage
+- `references/nsys-guide.md` — nsys timeline analysis and bottleneck identification
+- `references/ncu-guide.md` — ncu metrics, roofline, occupancy interpretation
+- `references/nvtx-patterns.md` — NVTX instrumentation and profiling patterns
 
 ## Checklist Before Optimizing
 

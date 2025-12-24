@@ -1,5 +1,19 @@
 # PTX ISA Reference
 
+**Related guides:** cuda-runtime.md (high-level API), cuda-driver.md (low-level API)
+
+## Table of Contents
+
+- [Local Documentation](#local-documentation) — 405 markdown files, 2.3MB
+- [When to Use PTX Documentation](#when-to-use-ptx-documentation) — Inspecting code, inline PTX, TensorCore ops
+- [Quick Search Examples](#quick-search-examples) — WGMMA fragments, TMA swizzling, specific instructions
+- [Documentation Structure](#documentation-structure) — Chapter organization
+- [Common PTX Concepts](#common-ptx-concepts) — Registers, address spaces, instructions, inline PTX
+- [Inspecting PTX](#inspecting-ptx) — Generate and extract PTX from binaries
+- [Key TensorCore Sections](#key-tensorcore-sections) — WMMA, WGMMA, TensorCore Gen5
+- [Memory Consistency Model](#memory-consistency-model) — Async operations, barriers
+- [Quick Reference Workflow](#quick-reference-workflow) — How to navigate docs
+
 ## Local Documentation
 
 **Complete PTX ISA 9.1 documentation is available locally at `ptx-docs/`**
@@ -11,7 +25,7 @@ The documentation has been converted to markdown with:
 - ✅ Section numbers for precise navigation
 - ✅ 1049 diagrams referenced as URLs (NVIDIA CDN)
 
-**Note on diagrams**: Agents may not have access to the internet. If so, when images are relevant to a query, extract URLs from markdown and return them to the parent for fetching if needed.
+**Note:** Documentation is local and searchable with grep. Links to online resources provided for reference only.
 
 ## When to Use PTX Documentation
 
